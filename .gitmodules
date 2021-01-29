@@ -4,3 +4,6 @@
 [submodule "continuous-integration"]
 	path = week_00/homework
 	url = https://github.com/mikeizbicki/continuous-integration
+[submodule "week_00/continuous-integration"]
+	path = week_00/continuous-integration
+	url = https://github.com/samuellee19/continuous-integration
