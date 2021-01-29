@@ -7,3 +7,6 @@
 [submodule "week_00/continuous-integration"]
 	path = week_00/continuous-integration
 	url = https://github.com/samuellee19/continuous-integration
+[submodule "hw_twitter/tweets_corona"]
+	path = hw_twitter/tweets_corona
+	url = https://github.com/samuellee19/twitter_coronavirus
