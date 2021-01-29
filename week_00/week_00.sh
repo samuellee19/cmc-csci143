@@ -1,6 +1,6 @@
 # 1. Write a 1-line command that counts the number of times the user mizbicki is logged in. The command should print only a single number and nothing else.
-finger -s | grep mizbicki | wc -l # if it is counting an instantaneous login counts
- # if counting number of logins occurred in total
+finger -s | grep mizbicki | wc -l # if it is counting current logins
+last | grep mizbicki | wc -l # if counting number of logins occurred in total
 
 # 2. Write a 1-line command that counts the number of zip files contained in the directory `/data/Twitter dataset`.
 ls /data/Twitter\ dataset -l | grep .zip | wc -l
