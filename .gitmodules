@@ -1,15 +1,27 @@
 [submodule "twitter_coronavirus"]
     path = hw_twitter/twitter_coronavirus
     url = https://github.com/mikeizbicki/twitter_coronavirus
+
 [submodule "continuous-integration"]
 	path = week_00/homework
 	url = https://github.com/mikeizbicki/continuous-integration
+
 [submodule "week_00/continuous-integration"]
 	path = week_00/continuous-integration
-	url = https://github.com/samuellee19/continuous-integration
+    url = https://github.com/samuellee19/continuous-integration
+
 [submodule "hw_twitter/tweets_corona"]
 	path = hw_twitter/tweets_corona
-	url = https://github.com/samuellee19/twitter_coronavirus
+    url = https://github.com/samuellee19/twitter_coronavirus
+
 [submodule "week_02/flask-on-docker"]
 	path = week_02/flask-on-docker
-	url = https://github.com/samuellee19/flask-on-docker
+    url = https://github.com/samuellee19/flask-on-docker
+
+[submodule "pagila_hw"]
+	path = week_04/pagila-hw
+    url = https://github.com/mikeizbicki/pagila-hw
+
+[submodule "week_03/pagila-hw"]
+	path = week_03/pagila-hw
+	url = https://github.com/mikeizbicki/pagila-hw
