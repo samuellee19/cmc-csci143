@@ -32,4 +32,8 @@
 
 [submodule "week_04/pagila-hw2"]
 	path = week_04/pagila-hw2
-	url = https://github.com/mikeizbicki/pagila-hw2
+    url = https://github.com/mikeizbicki/pagila-hw2
+
+[submodule "week_04/pagila-hw2-submission"]
+	path = week_04/pagila-hw2-submission
+	url = https://github.com/samuellee19/pagila-hw2
