@@ -33,3 +33,6 @@
 [submodule "week_04/pagila-hw2"]
 	path = week_04/pagila-hw2
 	url = https://github.com/mikeizbicki/pagila-hw2
+[submodule "hw_twitter/twitter_corona"]
+	path = hw_twitter/twitter_corona
+	url = https://github.com/samuellee19/twitter_coronavirus
