@@ -14,10 +14,6 @@
 	path = week_00/continuous-integration
     url = https://github.com/samuellee19/continuous-integration
 
-[submodule "hw_twitter/tweets_corona"]
-	path = hw_twitter/tweets_corona
-    url = https://github.com/samuellee19/twitter_coronavirus
-
 [submodule "week_02/flask-on-docker"]
 	path = week_02/flask-on-docker
     url = https://github.com/samuellee19/flask-on-docker
