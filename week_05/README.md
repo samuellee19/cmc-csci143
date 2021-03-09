@@ -1,4 +1,8 @@
 # Week 05: Designing the database layout
+<!--
+FUTURE NOTE:
+Implementing the word_ladder game in SQL would be a fantastic assignment!!!
+-->
 ### (disk usage + normalization)
 
 1. `CREATE TABLE` disk usage
@@ -82,6 +86,9 @@
     1. `UNIQUE` constraints
         1. enforces no duplicates in the column
         1. reference: https://www.postgresqltutorial.com/postgresql-unique-constraint/
+    1. `CHECK` constraints
+        1. enforces complicated conditions
+        1. reference: https://www.postgresqltutorial.com/postgresql-check-constraint/
     1. `PRIMARY KEY` 
         1. equivalent to `UNIQUE NOT NULL`
         1. has semantic meaning of "the most important column(s) in the table", and what you should use as the "id"
@@ -103,46 +110,190 @@
     1. Typical real world database: https://anna.voelkl.at/wp-content/uploads/2016/12/ce2.1.3.png
 
 1. common table structures
-    1. 1-1
-        1. different columns in the same table
-        1. example:
-            1. every film has exactly 1 title (and every title corresponds to exactly 1 film)
-            1. every customer has exactly 1 first name
+    1. 1-1 relationships
+        1. denormalized representation: different columns in the same table
+            1. every film has exactly 1 title, and every title corresponds to exactly 1 film
+            1. every customer has exactly 1 name, and every name corresponds to exactly one customer (`first_name || ' ' || last_name` is unique)
+                1. aside: don't store people's names as `first_name` and `last_name`: https://www.kalzumeus.com/2010/06/17/falsehoods-programmers-believe-about-names/
             1. every payment has either 1 or 0 payment dates (nullable column)
+        1. normalized representation: create a new table with a foreign key and unique constraint
+            1. rental-payment tables
+
+               ```
+               CREATE TABLE rental (
+                   rental_id SERIAL PRIMARY KEY,
+                   ...
+               );
+
+               CREATE TABLE payment (
+                   payment_id SERIAL PRIMARY KEY,
+                   rental_id UNIQUE REFERENCES rental(rental_id), -- NOTICE: UNIQUE + FOREIGN KEY
+                   amount numeric(5,2) NOT NULL,
+                   payment_date timestamptz NOT NULL
+               );
+
+               ```
+
+               notice that every payment must have a rental,
+               but not every rental must have a payment
+        1. when to use each:
+            1. always prefer the denormalized representation when possible
+            1. the normalized representation is slightly more powerful in that it can force us to have two columns inserted `null`/`not null` together
+
+               if we implemented the rental/payment tables as:
+               ```
+               CREATE TABLE rental (
+                   rental_id SERIAL PRIMARY KEY,
+                   ...
+                   amount numeric(5,2),         -- notice these collumns are NULLable
+                   payment_date timestamptz
+               );
+               ```
+               then everything that can be represented using the rental/payment tables could be represented using this modified table,
+               but we might get some rows that have an `amount` without a `payment_date` or vice versa
+
+               It's possible to create a `CHECK` constraint that enforces that `amount` and `payment_date` are linked:
+               ```
+               ALTER TABLE rental
+               ADD CONSTRAINT rental_check
+               CHECK ( (amount is null and payment_date is null) or (amount is not null and payment_date is not null));
+               ```
+               This is the best representation of this data for 99% of use cases since it uses significantly less disk space.
+               The overhead of the `payment` table is:
+               ```
+               24 bytes standard overhead + 4 bytes for rental_id + 4 bytes for rental_id
+               ```
+               The denormalized representation + `CHECK` constraint has none of this overhead.
+        1. IMNSHO, the pagila table is excessively normalized
+            1. rental-payment should be combined
+            1. film-language
+                1. make `language` a `TEXT` column in `film`
+            1. country-city-address-customer
+                1. combine all of these into a single `address` field inside the `customer` table
 
     1. 1-many
-        1. create a new table
-        1. "list/array" column
-        1. example:
-            1. film-language (film's have just one language, but there are many films for each language)
-            1. film-rating
-            1. staff-store
-            1. customer-address (modeling assumption; other reasonable assumptions could be 1-1 if each customer is a "household" or many-many if like amazon customers can have multiple addresses )
+        1. normalized representation: arrays
+            1. film-special_features
 
-    1. 1-1 (insert only)
-        1. the insert-only table pattern is used with the rental-payment tables
-        1. duplication in the customer_id/staff_id columns
-        1. follows the 1-many pattern, so there could be many payments for 1 rental, and no way to enforce that there is exactly 1 payment
+               ```
+               CREATE TABLE film (
+                   ...
+                   special_features TEXT[],
+                   ...
+               );
+               ```
+        1. normalized representation: create a new table with a foreign key
+            1. film-inventory
+               
+               ```
+               CREATE TABLE film (
+                   film_id SERIAL PRIMARY KEY,
+                   ...
+               );
+
+               CREATE TABLE inventory (
+                   inventory_id SERIAL PRIMARY KEY,
+                   film_id INTEGER REFERENCES film(film_id), -- NOTICE: FOREIGN KEY ONLY, NO UNIQUE
+                   store_id INTEGER,
+                   last_update TIMESTAMPTZ
+               );
+               ```
+            1. customer-rental
+            1. store-staff
+        1. disadvantages of the denormalized representation:
+            1. arrays not a sql standard feature
+                1. arrays not supported in MySQL/MSSQL, are supported in Oracle
+                1. many people believe you should never use arrays for this reason
+            1. can only have a single column as the many
+                1. the film-special_features split could be normalized,
+                1. no easy way to denormalize film-inventory, customer-rental, or store-staff
+            1. confusing to work with
+                1. you should always use the `unnest` function with arrays,
+                   as this is guaranteed to give asymptotically optimal performance
+                1. it is possible to index directly into an array like in standard python,
+                   but this is sometimes an O(1) operation and sometimes an O(n) operation,
+                   and it is very difficult to predict which situation you're in
+                1. see: https://heap.io/blog/engineering/dont-iterate-over-a-postgres-array-with-a-loop
+        1. advantages of the denormalized representation:
+            1. disk usage of the denormalized representation is significantly less:
+               ```
+               24 bytes overhead + (len array) * (bytes for the type)
+               ```
+               and this data can be TOASTed (i.e. compressed) when large
+
+               disk usage of the normalized representation is
+               ```
+               (number of rows)*(24 bytes overhead per row + bytes for type)
+               ```
+               this data cannot be TOASTed
+        1. personally, I use arrays (denormalization) if the following conditions are met:
+            1. only 1 column in the many (i.e. it's possible to use the denormalized form)
+            1. joins on the array will be rare
+            1. updates/deletes to entries in the array are rare
+        <!--
+        1. method: enums
+            1. film-rating (the rating column is restricted to be of the `mpaa_enum` type)
+            1. supported in postgres, but strongly discouraged; see e.g. https://tapoueh.org/blog/2018/05/postgresql-data-types-enum/
+        -->
 
     1. many-many
-        1. example:
+        1. think bipartite graph
+
+           <img src=bipartite.png width=500px />
+        1. no good denormalized representations
+        1. normalized representation: create "connector tables" that represent the edges of the bipartite graph
             1. actor-film
-            1. customer-film (passes through both the rental and inventory table)
-    1. hierarchical
-        1. example:
+
+               ```
+               CREATE TABLE film (
+                   film_ID SERIAL PRIMARY KEY,
+                   ...
+               );
+
+               CREATE TABLE film_actor (
+                   film_id INTEGER REFERENCES film(film_id),
+                   actor_id INTEGER REFERENCES actor(actor_id),
+                   PRIMARY KEY (film_id, actor_id),
+               );
+
+               CREATE TABLE actor (
+                   actor_id SERIAL PRIMARY KEY,
+                   ...
+               );
+               ```
+            1. customer-film (the join of rental and inventory acts as the connector table)
+            1. anti-pattern: category-film are given a many-many table structure, but they actually have a 1-1 relationship
+
+    1. general graph structures
+        1. no good denormalized representations
+        1. normalized representation: foreign key that references its own table
             1. no examples in the pagila database
             1. employee table
+               ```
+               CREATE TABLE employee (
+                   employee_id SERIAL PRIMARY KEY,
+                   manager INTEGER REFERENCES employee(employee_id)
+               );
+               ```
+            1. no easy way to enforce acyclical references (i.e. make the graph a tree)
+        1. all graph algorithms (DFS, BFS, Dijkstra, Prim, Kruskal, A*, etc.) can be implemented with optimal asymptotic efficiency using recursive sql queries
+            1. we're not covering how to do this
+            1. https://www.postgresqltutorial.com/postgresql-recursive-view/
+            1. https://www.postgresqltutorial.com/postgresql-recursive-query/
 
 1. references on good database design:
     1. Good overview https://relinx.io/2020/09/14/old-good-database-design/
     1. Database Modelization Anti-Patterns: https://tapoueh.org/blog/2018/03/database-modelization-anti-patterns/
     1. Building a scalable e-commerce data model: https://news.ycombinator.com/item?id=25353148
 
-1. pagila anti-patterns
-    1. don't store people's names as `first_name` and `last_name`: https://www.kalzumeus.com/2010/06/17/falsehoods-programmers-believe-about-names/
-    1. category and film are given a many-many table structure, but they actually have a 1-1 relationship
-    1. enum type for rating / `mpaa_rating`
-    1. address/city/country and film/language are probably excessive normalization (especially since the language/country don't use ISO codes)
+**Format of the midterm:**
+1. 4 SQL questions
+    1. at least 1 from each week (probably 2 from this week)
+1. 1 question to calculate the disk usage of a table/rearrange a table (same as lab)
+1. I'll give the midterm at the end of class on Tuesday, you'll have until Sunday to complete it
+    1. Tuesday will be a "review day" where you can ask questions
+    1. no extensions because no working together
+    1. midterm will take the place of homework next week
 
 ## Lab
 
@@ -184,3 +335,4 @@ CREATE TABLE example (
     e JSONB
 );
 ```
+
