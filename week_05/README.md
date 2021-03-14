@@ -305,23 +305,26 @@ Submit your reordered tables and the space usage to sakai.
 
 ```
 CREATE TABLE network_connection (
-    id SERIAL,
+    starttime timestamptz NOT NULL,
+    bytes_sent int8 NOT NULL,
     source macaddr NOT NULL,
     dest macaddr NOT NULL,
-    starttime timestamptz NOT NULL,
-    bytes_sent int8 NOT NULL
+    id SERIAL
 );
 ```
+
+- `Space per Row` = 24 + 8*2 + 6*2 + 4 = **56 bytes**
 
 ```
 CREATE TABLE event (
     id BIGSERIAL,
-    name TEXT,
-    public BOOLEAN,
-    max_guests SMALLINT,
-    location_id INTEGER NOT NULL,
     starttime timestamp with time zone NOT NULL,
-    endtime timestamp with time zone
+    endtime timestamp with time zone,
+    location_id INTEGER NOT NULL,
+    max_guests SMALLINT,
+    public BOOLEAN,
+    name TEXT
+
 );
 ```
 
